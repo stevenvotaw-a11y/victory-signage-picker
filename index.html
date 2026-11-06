@@ -47,6 +47,9 @@
   .mapbox svg { display: block; width: 100%; height: auto; margin: 0 auto; }
   .mapbox.tall svg { max-width: 560px; }
   .mapbox.zoomed svg { width: 1350px; max-width: none; }
+  /* Zoomed (phones): a fixed window you drag around in, so a 1350px-wide map does not also run ~1300px down the page. */
+  .mapbox.zoomed { max-height: 440px; overflow: auto; }
+  .panhint { margin: 6px 2px 0; font-size: 13px; color: var(--muted); }
 
   .scr { cursor: pointer; outline: none; }
   .scr .hit { fill: transparent; }
@@ -160,7 +163,7 @@
       sec.innerHTML = `<div class="bldg-head"><h2>${b.name}<span>${b.sub}</span></h2>
         ${hasVert ? `<span class="legend"><span class="vchip">VERT</span> = vertical screen, needs tall artwork</span>` : ""}
         <div class="seg" role="group" aria-label="Map size for ${b.name}"><button type="button" data-z="0" aria-pressed="true">Fit screen</button><button type="button" data-z="1" aria-pressed="false">Zoom in</button></div></div>
-        <div class="mapbox${b.tall ? " tall" : ""}"></div>`;
+        <div class="mapbox${b.tall ? " tall" : ""}"></div><p class="panhint" hidden>Drag inside the map to see all of it.</p>`;
       const box = sec.querySelector(".mapbox");
       const svg = el("svg", { viewBox: `0 0 ${b.w} ${b.vh}`, role: "group", "aria-label": `${b.name} map with selectable screens` });
       svg.append(el("image", { href: b.img, x: 0, y: 0, width: b.w, height: b.h }));
@@ -188,6 +191,15 @@
       box.append(svg);
       sec.setZoom = on => {
         box.classList.toggle("zoomed", on);
+        sec.querySelector(".panhint").hidden = !on;
+        if (on) requestAnimationFrame(() => {
+          const k = 1350 / b.w, xs = b.spots.map(s => s[1] * k), ys = b.spots.map(s => s[2] * k);
+          /* start on the screen nearest the average screen position, so the first view always shows badges */
+          const avg = a => a.reduce((t, v) => t + v, 0) / a.length, ax = avg(xs), ay = avg(ys);
+          let n = 0; xs.forEach((x, i) => { if (Math.hypot(x - ax, ys[i] - ay) < Math.hypot(xs[n] - ax, ys[n] - ay)) n = i; });
+          box.scrollLeft = Math.max(0, xs[n] - box.clientWidth / 2);
+          box.scrollTop = Math.max(0, ys[n] - box.clientHeight / 2);
+        });
         sec.querySelectorAll(".seg button").forEach(x => x.setAttribute("aria-pressed", String((x.dataset.z === "1") === on)));
         resize();
       };
@@ -247,7 +259,7 @@
     if (JF && widgetCampus) JF.sendData({ value: fieldValue(widgetCampus) });
     resize();
   }
-  function resize() { if (JF) setTimeout(() => JF.requestFrameResize({ height: document.documentElement.scrollHeight }), 50); }
+  function resize() { if (JF) setTimeout(() => JF.requestFrameResize({ height: Math.ceil(document.body.getBoundingClientRect().height) + 2 }), 50); }
 
   document.getElementById("clearBtn").addEventListener("click", () => { picked.clear(); render(); toast("Cleared"); });
   document.querySelectorAll('input[name="campus"]').forEach(r => r.addEventListener("change", render));
