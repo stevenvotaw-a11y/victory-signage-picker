@@ -281,6 +281,8 @@
     /* Jotform mode: the widget's "campus" setting picks the maps; the field value is the comma-separated screen list. */
     document.body.classList.add("widget");
     document.getElementById("pageHead").hidden = true; document.getElementById("demo").hidden = true;
+    /* The "Jotform field receives" box is for the demo; in the form it only repeats the picked list. */
+    document.getElementById("outs").hidden = true;
     JF.subscribe("ready", (data) => {
       const setting = (JF.getWidgetSetting && JF.getWidgetSetting("campus")) || urlCampus || "okc";
       widgetCampus = String(setting).toLowerCase().startsWith("ed") ? "edmond" : "okc";
