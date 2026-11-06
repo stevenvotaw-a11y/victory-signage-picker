@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>*,*::before,*::after{box-sizing:border-box}body{margin:0}img,svg{max-width:100%}[hidden]{display:none!important}</style>
+<title>Victory Screen Picker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Nunito+Sans:wght@400;600;700&display=swap">
+<style>
+  /* Layout: demo strip (stands in for the Jotform campus question) → one map card per building → tray with what each Jotform field would receive. In Jotform, only the building sections render. */
+  :root {
+    --bg: #F3F6F7; --surface: #FFFFFF; --ink: #15232A; --muted: #56686F; --line: #D3DDE1;
+    --accent: #3F8197; --accent-soft: #DCEBF0; --gold: #B8925E; --warn: #C27A12; --warn-soft: #FDF3E1;
+    --badge-fill: #FFFFFF; --badge-ink: #15232A; --badge-hover: #E9F2F5; --badge-pick: #3F8197; --badge-pick-edge: #1E4D5C; --badge-pick-ink: #FFFFFF; --focus: #E0A33A;
+    --font-display: "Poppins", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+    --font-body: "Nunito Sans", "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #0F171B; --surface: #172228; --ink: #E4EDF0; --muted: #9DB0B7; --line: #2B3B43; --accent: #74B4C9; --accent-soft: #1D3A45; --gold: #D2B07F; --warn: #E8A33D; --warn-soft: #33260F; color-scheme: dark; }
+  }
+  :root[data-theme="dark"] { --bg: #0F171B; --surface: #172228; --ink: #E4EDF0; --muted: #9DB0B7; --line: #2B3B43; --accent: #74B4C9; --accent-soft: #1D3A45; --gold: #D2B07F; --warn: #E8A33D; --warn-soft: #33260F; color-scheme: dark; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.5; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 56px; display: grid; gap: 22px; }
+  body.widget .wrap { padding-block: 4px 8px; gap: 16px; }
+  .eyebrow { font-family: var(--font-display); font-weight: 600; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--gold); margin: 0; }
+  h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(24px, 4vw, 34px); line-height: 1.15; margin: 4px 0 6px; text-wrap: balance; }
+  .lede { margin: 0; color: var(--muted); max-width: 64ch; }
+
+  .demo { display: grid; gap: 10px; background: var(--surface); border: 1px dashed var(--line); border-radius: 10px; padding: 14px 16px; }
+  .demo-q { font-weight: 700; }
+  .radios { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+  .radios label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+  .demo small { color: var(--muted); }
+
+  .bldg { display: grid; gap: 10px; }
+  .bldg-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; }
+  .bldg h2 { font-family: var(--font-display); font-weight: 600; font-size: 19px; margin: 0; }
+  .bldg h2 span { color: var(--muted); font-weight: 500; font-size: 14px; margin-left: 6px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; background: var(--surface); }
+  .seg button { font: 600 13px var(--font-body); color: var(--muted); background: none; border: 0; border-radius: 999px; padding: 5px 12px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+  .mapbox { background: #FFFFFF; border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .mapbox svg { display: block; width: 100%; height: auto; margin: 0 auto; }
+  .mapbox.tall svg { max-width: 560px; }
+  .mapbox.zoomed svg { width: 1350px; max-width: none; }
+
+  .scr { cursor: pointer; outline: none; }
+  .scr .hit { fill: transparent; }
+  .scr .tag { fill: var(--badge-fill); stroke: var(--badge-ink); transition: fill .15s ease; }
+  .scr text { font-family: var(--font-display); font-weight: 700; fill: var(--badge-ink); pointer-events: none; }
+  .scr:hover .tag { fill: var(--badge-hover); }
+  .scr[aria-checked="true"] .tag { fill: var(--badge-pick); stroke: var(--badge-pick-edge); }
+  .scr[aria-checked="true"] text { fill: var(--badge-pick-ink); }
+  .scr:focus-visible .tag { stroke: var(--focus); }
+  .scr .vtag { letter-spacing: .08em; fill: var(--badge-ink); stroke: var(--badge-fill); paint-order: stroke; stroke-linejoin: round; }
+  .scr[aria-checked="true"] .vtag { fill: var(--badge-pick); stroke: var(--badge-fill); }
+  .legend { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+  .vchip { font-family: var(--font-display); font-weight: 700; font-size: 10px; letter-spacing: .06em; color: var(--ink); border: 1.5px solid var(--ink); border-radius: 4px; padding: 0 4px; line-height: 16px; }
+  .vwarn { display: grid; gap: 4px; border: 2px solid var(--warn); background: var(--warn-soft); border-radius: 10px; padding: 12px 14px; }
+  .vwarn strong { font-family: var(--font-display); font-weight: 700; font-size: 15px; }
+  .vwarn p { margin: 0; font-size: 15px; }
+  .seg button:focus-visible, .btn:focus-visible, .chip button:focus-visible, .radios input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  .tray { display: grid; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+  .tray h2 { font-family: var(--font-display); font-weight: 600; font-size: 17px; margin: 0; }
+  .tray h2 b { color: var(--accent); font-variant-numeric: tabular-nums; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; min-height: 36px; align-items: center; }
+  .empty { color: var(--muted); font-size: 15px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; background: var(--accent-soft); border-radius: 999px; padding: 5px 6px 5px 12px; font-size: 14px; }
+  .chip code { font-family: var(--font-display); font-weight: 700; font-size: 13px; color: var(--accent); }
+  .chip .tall { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--gold); border: 1px solid var(--gold); border-radius: 4px; padding: 0 4px; }
+  .chip button { border: 0; background: none; color: var(--muted); font-size: 18px; line-height: 1; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; }
+  .chip button:hover { background: var(--line); color: var(--ink); }
+  .note { margin: 0; font-size: 14px; color: var(--muted); }
+  .btn { font: 600 14px var(--font-body); border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 8px 14px; cursor: pointer; }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .outs { display: grid; gap: 10px; }
+  .out { display: grid; gap: 4px; }
+  .out .lab { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .05em; text-transform: uppercase; }
+  .out output { display: block; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 14px; background: var(--bg); border: 1px dashed var(--line); border-radius: 8px; padding: 9px 12px; min-height: 40px; overflow-wrap: anywhere; }
+  .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); font-weight: 600; font-size: 14px; padding: 9px 16px; border-radius: 999px; opacity: 0; transition: opacity .2s; pointer-events: none; max-width: calc(100% - 32px); }
+  .toast.show { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) { .scr .tag, .toast { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header id="pageHead">
+    <p class="eyebrow">Digital signage request · test build</p>
+    <h1>Pick your screens</h1>
+    <p class="lede">Tap each screen you want your sign on. Tap it again to remove it. Hover or long-press a badge to see its name.</p>
+  </header>
+
+  <section class="demo" id="demo" aria-label="Stand-in for the Jotform campus question">
+    <div class="demo-q">Campus</div>
+    <div class="radios">
+      <label><input type="radio" name="campus" id="cOkc" value="okc" checked> OKC</label>
+      <label><input type="radio" name="campus" id="cEdm" value="edmond"> Edmond</label>
+      <label><input type="radio" name="campus" id="cBoth" value="both"> Both</label>
+    </div>
+    <small>In the real form this is the Jotform campus question; it decides which maps appear.</small>
+  </section>
+
+  <div id="buildings" class="wrap" style="padding:0;max-width:none"></div>
+
+  <section class="tray" id="tray" aria-labelledby="trayTitle">
+    <div class="row">
+      <h2 id="trayTitle"><b id="nPicked">0</b> screens picked</h2>
+      <button class="btn" type="button" id="clearBtn" disabled>Clear all</button>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="vwarn" id="vWarn" role="note" hidden>
+      <strong id="vWarnTitle">You picked a vertical screen</strong>
+      <p>Vertical screens stand tall, so they need <b>vertical artwork: 1080 × 1920</b>, taller than it is wide. A horizontal graphic won't fit them. Please have a vertical version ready to upload.</p>
+    </div>
+    <div class="outs" id="outs"></div>
+  </section>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="https://js.jotform.com/JotFormCustomWidget.min.js"></script>
+<script>
+  const NAMES = {
+    "E-01":"East Entrance","E-02":"East Diagonal North","E-03":"East Diagonal South","E-04":"East Vertical","E-06":"Main Aud Entrance East","E-07":"Main Aud Exit East","E-08":"Main Aud Entrance West","E-09":"Main Aud Exit West","E-10":"West Vertical","E-11":"West Diagonal South","E-12":"West Diagonal North","E-13":"Coffee Cafe","E-14":"Lounge","E-15":"West Duo East","E-16":"West Duo West",
+    "W-01":"Reception Window","W-02":"Youth Annex","W-03":"VKids Lobby Duo West","W-04":"VKids Lobby Duo East","W-05":"VKids Checkin","W-06":"West Trio South","W-07":"West Trio North","W-08":"West Trio West","W-09":"Youth Auditorium","W-10":"Commons","W-11":"Back Hall Duo West","W-12":"Back Hall Duo East","W-13":"East Trio North","W-14":"East Trio West","W-15":"East Trio East","W-16":"VKids Pickup","W-17":"VKids Dropoff","W-18":"Midwest Entrance","W-19":"Midwest Lobby","W-20":"Youth Lounge",
+    "N-01":"Assisted Checkin","N-02":"Self Checkin","N-03":"","N-04":"Kids Vertical",
+    "S-01":"Youth Hall","S-02":"Connect Center","S-03":"East Aud Entrance","S-04":"West Aud Entrance","S-05":"West Vertical","S-06":"Center Vertical","S-07":"East Vertical"
+  };
+  const VERTICAL = new Set(["E-04","E-10","N-04","S-05","S-06","S-07"]);
+  /* Badge centers, sizes and angles come from labels.json via render_maps.py's crops — the same data that drew the printed maps. */
+  const BUILDINGS = [
+    { id:"okc-east", campus:"okc", name:"OKC – East building", sub:"Main Auditorium · Main Lobby · Cafe · Lounge", img:"okc-east-base.jpg", w:1600, h:1606, vh:1500, badge:[89.7,40.5], tall:false,
+      spots:[["E-01",1387.3,738.5,0],["E-02",1345.5,1151.4,32.7],["E-03",1321.3,1189.1,32.7],["E-04",1126.2,1216.6,0],["E-06",918.6,1268.4,0],["E-07",917.9,1223.5,0],["E-08",782.6,1268.4,0],["E-09",782.6,1223.5,0],["E-10",580.8,1213,0],["E-11",409.3,1237.1,-41.8],["E-12",379.4,1203.7,-41.8],["E-13",210.1,1091.9,45],["E-14",235.1,975.8,-45],["E-15",329.1,1035.1,-90],["E-16",284.3,1035.1,-90]] },
+    { id:"okc-west", campus:"okc", name:"OKC – West building", sub:"vKids · VYTH · The Commons · Offices", img:"okc-west-base.jpg", w:1600, h:1130, vh:990, badge:[62,28], tall:false,
+      spots:[["W-01",665.5,817,-90],["W-02",737,336,-90],["W-03",824.3,709,-90],["W-04",855.2,708.5,-90],["W-05",811,816.5,-90],["W-06",752.5,479,0],["W-07",752.5,448,0],["W-08",705,464.5,-90],["W-09",568,441.5,0],["W-10",130,464.5,-90],["W-11",1036.2,151.5,-90],["W-12",1067.2,151.5,-90],["W-13",1376.5,654,0],["W-14",1361.5,699.5,-90],["W-15",1392.5,699.5,-90],["W-16",1169,685.5,0],["W-17",937.5,685.5,0],["W-18",1441.5,803,0],["W-19",1428,577,0],["W-20",253,441.5,0]] },
+    { id:"edmond-north", campus:"edmond", name:"Edmond – North building", sub:"vKids", img:"edmond-north-base.jpg", w:1600, h:802, vh:802, badge:[75.1,29.4], tall:false,
+      spots:[["N-01",682.2,690,-90],["N-02",840.3,527.4,90],["N-03",806.1,361.4,0],["N-04",52.2,404,-90]] },
+    { id:"edmond-south", campus:"edmond", name:"Edmond – South building", sub:"Main Auditorium · Main Lobby", img:"edmond-south-base.jpg", w:1600, h:2493, vh:2493, badge:[127.3,49.9], tall:true,
+      spots:[["S-01",540.2,1823.7,-90],["S-02",835.3,1705.8,0],["S-03",1143.5,1548.9,-64.4],["S-04",1239.6,376.8,-45],["S-05",1510,744.1,90],["S-06",1510,1244.7,90],["S-07",1510,1764.3,90]] }
+  ];
+  const label = c => NAMES[c] ? `${c} ${NAMES[c]}` : c;
+  const NS = "http://www.w3.org/2000/svg";
+  const picked = new Set();
+  const el = (tag, attrs) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); return n; };
+  /* Widget mode only when framed inside Jotform; opening the page directly shows the demo. */
+  const JF = (window.self !== window.top && window.JFCustomWidget) ? window.JFCustomWidget : null;
+  const urlCampus = new URLSearchParams(location.search).get("campus");
+  let widgetCampus = null;                        /* "okc" or "edmond" in Jotform; null in the demo */
+
+  function buildMaps() {
+    const host = document.getElementById("buildings"); host.textContent = "";
+    for (const b of BUILDINGS) {
+      const sec = document.createElement("section"); sec.className = "bldg"; sec.id = "sec-" + b.id; sec.dataset.campus = b.campus;
+      const hasVert = b.spots.some(s => VERTICAL.has(s[0]));
+      sec.innerHTML = `<div class="bldg-head"><h2>${b.name}<span>${b.sub}</span></h2>
+        ${hasVert ? `<span class="legend"><span class="vchip">VERT</span> = vertical screen, needs tall artwork</span>` : ""}
+        <div class="seg" role="group" aria-label="Map size for ${b.name}"><button type="button" data-z="0" aria-pressed="true">Fit screen</button><button type="button" data-z="1" aria-pressed="false">Zoom in</button></div></div>
+        <div class="mapbox${b.tall ? " tall" : ""}"></div>`;
+      const box = sec.querySelector(".mapbox");
+      const svg = el("svg", { viewBox: `0 0 ${b.w} ${b.vh}`, role: "group", "aria-label": `${b.name} map with selectable screens` });
+      svg.append(el("image", { href: b.img, x: 0, y: 0, width: b.w, height: b.h }));
+      const [bw0, bh] = b.badge, fs = (bh * 0.64).toFixed(1), sw = (bh * 0.09).toFixed(1);
+      for (const [code, x, y, ang] of b.spots) {
+        const vert = VERTICAL.has(code), bw = bw0;
+        /* VERT sits just outside the badge on the open-floor side: above flat badges, toward the room for wall-mounted (±90°) ones. */
+        const side = Math.abs(ang) > 45 ? 1 : -1, vfs = bh * .5, vy = side * (bh / 2 + vfs * .72);
+        const hitY0 = vert && side < 0 ? vy - vfs * .6 : -bh * .56, hitY1 = vert && side > 0 ? vy + vfs * .6 : bh * .56;
+        const g = el("g", { class: "scr", transform: `translate(${x} ${y}) rotate(${ang})`, tabindex: "0", role: "checkbox", "aria-checked": "false", "aria-label": label(code) + (vert ? ", vertical screen" : ""), "data-code": code });
+        const t = el("title", {}); t.textContent = label(code) + (vert ? " (vertical screen)" : "");
+        g.append(t,
+          el("rect", { class: "hit", x: -bw * .58, y: hitY0, width: bw * 1.16, height: hitY1 - hitY0 }),
+          el("rect", { class: "tag", x: -bw / 2, y: -bh / 2, width: bw, height: bh, rx: bh * .2, "stroke-width": sw }));
+        const tx = el("text", { x: 0, y: bh * .04, "text-anchor": "middle", "dominant-baseline": "middle", "font-size": fs }); tx.textContent = code;
+        g.append(tx);
+        if (vert) {
+          const vt = el("text", { class: "vtag", x: 0, y: vy, "text-anchor": "middle", "dominant-baseline": "middle", "font-size": vfs.toFixed(1), "stroke-width": (bh * .16).toFixed(1) });
+          vt.textContent = "VERT"; g.append(vt);
+        }
+        g.addEventListener("click", () => toggle(code));
+        g.addEventListener("keydown", e => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); toggle(code); } });
+        svg.append(g);
+      }
+      box.append(svg);
+      sec.querySelectorAll(".seg button").forEach(btn => btn.addEventListener("click", () => {
+        const on = btn.dataset.z === "1"; box.classList.toggle("zoomed", on);
+        sec.querySelectorAll(".seg button").forEach(x => x.setAttribute("aria-pressed", String((x.dataset.z === "1") === on)));
+        resize();
+      }));
+      if (window.matchMedia("(max-width: 700px)").matches) sec.querySelector('[data-z="1"]').click();
+      host.append(sec);
+    }
+  }
+
+  function campusShown() {
+    if (widgetCampus) return [widgetCampus];
+    const v = document.querySelector('input[name="campus"]:checked').value;
+    return v === "both" ? ["okc", "edmond"] : [v];
+  }
+  function fieldValue(campus) {
+    return [...picked].filter(c => (campus === "okc" ? /^[EW]-/ : /^[NS]-/).test(c)).sort().map(label).join(", ");
+  }
+
+  let toastTimer;
+  function toast(msg) { const t = document.getElementById("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 1400); }
+  function toggle(code, quiet) {
+    if (picked.has(code)) { picked.delete(code); if (!quiet) toast(`Removed ${label(code)}`); }
+    else { picked.add(code); if (!quiet) toast(`Added ${label(code)}`); }
+    render();
+  }
+
+  function render() {
+    const shown = campusShown();
+    document.querySelectorAll(".bldg").forEach(s => s.hidden = !shown.includes(s.dataset.campus));
+    /* Screens on a hidden campus are dropped, the same way Jotform clears a hidden field. */
+    for (const c of [...picked]) if (!shown.includes(/^[EW]-/.test(c) ? "okc" : "edmond")) picked.delete(c);
+    const list = [...picked].sort();
+    document.querySelectorAll(".scr").forEach(g => g.setAttribute("aria-checked", picked.has(g.dataset.code) ? "true" : "false"));
+    document.getElementById("nPicked").textContent = list.length;
+    document.getElementById("trayTitle").lastChild.textContent = list.length === 1 ? " screen picked" : " screens picked";
+    const chips = document.getElementById("chips"); chips.textContent = "";
+    if (!list.length) { const s = document.createElement("span"); s.className = "empty"; s.textContent = "Nothing picked yet. Tap a screen on the map."; chips.append(s); }
+    for (const c of list) {
+      const chip = document.createElement("span"); chip.className = "chip";
+      const code = document.createElement("code"); code.textContent = c;
+      const name = document.createElement("span"); name.textContent = NAMES[c] || "Unnamed screen";
+      chip.append(code, name);
+      if (VERTICAL.has(c)) { const p = document.createElement("span"); p.className = "tall"; p.textContent = "Vertical"; chip.append(p); }
+      const x = document.createElement("button"); x.type = "button"; x.textContent = "×"; x.setAttribute("aria-label", `Remove ${label(c)}`);
+      x.addEventListener("click", () => toggle(c)); chip.append(x); chips.append(chip);
+    }
+    const verts = list.filter(c => VERTICAL.has(c));
+    document.getElementById("vWarn").hidden = !verts.length;
+    document.getElementById("vWarnTitle").textContent = verts.length === 1 ? `You picked a vertical screen (${verts[0]})` : `You picked ${verts.length} vertical screens (${verts.join(", ")})`;
+    document.getElementById("clearBtn").disabled = !list.length;
+    const outs = document.getElementById("outs"); outs.textContent = "";
+    for (const camp of shown) {
+      const d = document.createElement("div"); d.className = "out";
+      d.innerHTML = `<span class="lab">Jotform field "${camp === "okc" ? "OKC screens" : "Edmond screens"}" receives</span><output></output>`;
+      d.querySelector("output").textContent = fieldValue(camp) || "(no screens)";
+      outs.append(d);
+    }
+    if (JF && widgetCampus) JF.sendData({ value: fieldValue(widgetCampus) });
+    resize();
+  }
+  function resize() { if (JF) setTimeout(() => JF.requestFrameResize({ height: document.documentElement.scrollHeight }), 50); }
+
+  document.getElementById("clearBtn").addEventListener("click", () => { picked.clear(); render(); toast("Cleared"); });
+  document.querySelectorAll('input[name="campus"]').forEach(r => r.addEventListener("change", render));
+
+  buildMaps();
+  if (JF) {
+    /* Jotform mode: the widget's "campus" setting picks the maps; the field value is the comma-separated screen list. */
+    document.body.classList.add("widget");
+    document.getElementById("pageHead").hidden = true; document.getElementById("demo").hidden = true;
+    JF.subscribe("ready", (data) => {
+      const setting = (JF.getWidgetSetting && JF.getWidgetSetting("campus")) || urlCampus || "okc";
+      widgetCampus = String(setting).toLowerCase().startsWith("ed") ? "edmond" : "okc";
+      const prior = (data && data.value) || "";
+      prior.split(",").map(s => s.trim().slice(0, 4)).filter(c => NAMES[c] !== undefined).forEach(c => picked.add(c));
+      render();
+    });
+    JF.subscribe("submit", () => JF.sendSubmit({ valid: true, value: fieldValue(widgetCampus) }));
+  } else {
+    /* Demo mode: start with a realistic example so the page shows what it does. */
+    ["E-13", "W-10", "E-04"].forEach(c => picked.add(c));
+    render();
+  }
+</script>
+</body>
+</html>
