@@ -186,12 +186,12 @@
         svg.append(g);
       }
       box.append(svg);
-      sec.querySelectorAll(".seg button").forEach(btn => btn.addEventListener("click", () => {
-        const on = btn.dataset.z === "1"; box.classList.toggle("zoomed", on);
+      sec.setZoom = on => {
+        box.classList.toggle("zoomed", on);
         sec.querySelectorAll(".seg button").forEach(x => x.setAttribute("aria-pressed", String((x.dataset.z === "1") === on)));
         resize();
-      }));
-      if (window.matchMedia("(max-width: 520px)").matches) sec.querySelector('[data-z="1"]').click();
+      };
+      sec.querySelectorAll(".seg button").forEach(btn => btn.addEventListener("click", () => { sec.dataset.userZoom = "1"; sec.setZoom(btn.dataset.z === "1"); }));
       host.append(sec);
     }
   }
@@ -252,9 +252,19 @@
   document.getElementById("clearBtn").addEventListener("click", () => { picked.clear(); render(); toast("Cleared"); });
   document.querySelectorAll('input[name="campus"]').forEach(r => r.addEventListener("change", render));
 
+  /* Start zoomed in only on phone-width screens. The picker can load while hidden (width 0), so
+     re-check whenever its width changes, until the person picks a size themselves. */
+  let lastW = -1;
+  function autoZoom() {
+    const w = document.documentElement.clientWidth || window.innerWidth;
+    if (!w || w === lastW) return; lastW = w;
+    document.querySelectorAll(".bldg").forEach(s => { if (!s.dataset.userZoom && s.setZoom) s.setZoom(w <= 520); });
+  }
+  window.addEventListener("resize", autoZoom);
   /* Inside Jotform the form is light, so the picker stays light whatever the device theme. */
   if (JF) document.documentElement.setAttribute("data-theme", "light");
   buildMaps();
+  autoZoom();
   if (JF) {
     /* Jotform mode: the widget's "campus" setting picks the maps; the field value is the comma-separated screen list. */
     document.body.classList.add("widget");
